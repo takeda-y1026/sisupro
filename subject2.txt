@@ -1,0 +1,184 @@
+学籍番号: 202111775
+名前: 竹田雄貴
+課題番号：2
+練習問題番号：207
+題名：strlenの自作関数
+
+
+作成したプログラム：my_strlen1.c
+---------------------------------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <time.h>
+
+char* make_str(int len){ //文字列の作成
+    char *s = (char*)malloc(len + 1); 
+
+    if (s == NULL){
+        return NULL; // メモリ確保が失敗した場合
+    }
+
+    for (int i = 0; i < len; i++){
+        s[i] = 'a';
+    }
+    s[len] = '\0';
+
+    return s;
+}
+
+//strlenと同じ動作をする
+int main(void){
+    clock_t start_clock, end_clock;
+    char *s = make_str(1000000000 - 1);
+    int slen = 0;
+    start_clock = clock();
+    for (int i = 0; s[i] != '\0'; i++){
+        slen++;
+    }
+    end_clock = clock();
+    double time1 = (double)(end_clock - start_clock) / CLOCKS_PER_SEC;
+    start_clock = clock();
+    int slen2 = strlen(s);
+    end_clock = clock();
+    double time2 = (double)(end_clock - start_clock) / CLOCKS_PER_SEC;
+    printf("my_strlen1: %d\n", slen);
+    printf("time (my_strlen1): %f\n", time1);
+    printf("\n");
+    printf("strlen: %d\n", slen2);
+    printf("time (strlen): %f\n", time2);
+    free(s);
+    free(s);
+
+    return 0;
+}
+---------------------------------------
+
+my_strlen1: 999999999
+time (my_strlen1): 2.123000
+
+strlen: 999999999
+time (strlen): 0.103000
+
+
+
+作成した一つ目のプログラム(my_strlen1.c)の説明：
+７～２０行目の、char* make_str 関数で任意の長さの文字列を作成する。その際、文字列の要素はすべて'a'となっている。
+
+２３行目からの main 関数内で、strlen 関数と同じ動作をする、シンプルなプログラムを作成した。
+これは、for文で配列の先頭から終端文字までの長さを順にカウントしている。
+そして、for文を回している間の実行時間を clock() 関数を用いて計測している。
+
+
+
+作成したプログラム：my_strlen2.c
+---------------------------------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <time.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+char* make_str(int len){ //文字列の作成
+    char *s = (char*)malloc(len + 1); 
+
+    if (s == NULL){
+        return NULL; // メモリ確保が失敗した場合
+    }
+
+    for (int i = 0; i < len; i++){
+        s[i] = 'a';
+    }
+    s[len] = '\0';
+
+    return s;
+}
+
+bool contains_zero_byte(uint64_t v){ //64ビット整数にゼロバイトが含まれているかどうかをチェック
+    uint64_t hi = 0x8080808080808080;
+    uint64_t lo = 0x0101010101010101;
+    return ((v - lo) & ~v & hi) != 0;
+}
+
+int my_strlen2(const char *s){
+    const char *start = s;
+    while (((uintptr_t)s & 7) != 0){
+        if (*s == '\0') return s - start;
+        s++;
+    }
+
+    const uint64_t *word_ptr = (const uint64_t *)s;
+    while (!contains_zero_byte(*word_ptr)){
+        word_ptr++;
+    }
+
+    s = (const char *)word_ptr;
+    while (*s != '\0'){
+        s++;
+    }
+
+    return (int)(s - start);
+}
+
+int main(void){
+    clock_t start_clock, end_clock;
+    char *s = make_str(1000000000 - 1);
+
+    start_clock = clock();
+    int slen1 = my_strlen2(s);
+    end_clock = clock();
+    double time1 = (double)(end_clock - start_clock) / CLOCKS_PER_SEC;
+
+    start_clock = clock();
+    int slen2 = strlen(s);
+    end_clock = clock();
+    double time2 = (double)(end_clock - start_clock) / CLOCKS_PER_SEC;
+
+    printf("my_strlen2: %d\n", slen1);
+    printf("time (my_strlen2): %f\n", time1);
+    printf("\n");
+    printf("strlen: %d\n", slen2);
+    printf("time (strlen): %f\n", time2);
+
+    free(s);
+    return 0;
+}
+
+---------------------------------------
+
+実行結果：
+$ ./a.exe
+my_strlen2: 999999999
+time (my_strlen2): 0.354000
+
+strlen: 999999999
+time (strlen): 0.131000
+
+
+作成した一つ目のプログラム(my_strlen1.c)の説明：
+終端文字である'\0'は０バイトである。そのため、文字数をカウントせずに文字列の長さを調べるためには、８ビット単位でその中に０バイトが含まれているか確認するのが良いと思った。
+なぜなら、一文字は１バイトで表されており、一文字ずつの計測していくのではなく、複数の文字(ここでは８文字)を一気に計測する方が効率的であると考えたからである。
+その考えをもとにプログラムを説明していく。
+
+９～２２行目の char* make_str 関数で任意の長さの文字列を作成する。
+
+２４～２７行目の contains_zero_byteで、６４ビット整数にゼロバイトが含まれているかどうかをチェックしている。
+
+３０～４８行目の my_strlen2 で strlen 関数と同じ動作をする関数を作成している。これは、先ほど作成した contains_zero_byte 関数を用いて８バイト単位で０バイトが含まれていないか確認し、
+含まれていなければ次の８バイトを順に調べていくという関数である。
+
+main 関数では、make_str で作成した文字列を my_strlen2 と strlen を用いて長さを測定し、それぞれの実行時間を clock() 関数を用いて計測している。
+
+
+
+
+２つの関数の結果比較：
+文字列の長さが 1000000000 - 1 であるときの実行時間を比較してみた。
+１つ目のシンプルなアルゴリズムで作成したmy_strlen1関数の実行時間は 2.123000(s)。
+２つ目の工夫したアルゴリズムで作成したmy_strlen2関数の実行時間は 0.354000(s)。
+よって、実行時間はアルゴリズムを工夫することによって実行時間を約１０～２０％に短縮できたことになる。
+
+
